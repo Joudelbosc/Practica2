@@ -1,0 +1,59 @@
+---
+title: 'Pràctica 2: Neteja i anàlisi de les dades'
+author: "Víctor Iruela Garrido, Joel Rosell Mirmi"
+date: '`r format(Sys.Date(),"%e de %B %Y")`'
+output:
+  html_document:
+    toc: yes
+    number_sections: yes
+    toc_depth: 2
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Descripció del dataset.
+Perquè és important i quina pregunta/problema pretén respondre?
+
+És un conjunt de dades que està focalitzat en fer una estimació dels nivells d’obesitat, en funció dels hàbits alimentaris i la condició física.
+
+El joc de dades seleccionat, publicades el 27/08/2019, és un conjunt de registres, que es corresponen amb individus de Colombia, Perú i Mèxic (font de les dades a les referències), amb edats de 14 a 64 anys. De cada individu es recullen una sèrie d’atributs que ens dóna una idea del nivell d’obesitat, els hàbits alimentaris i la condició física.
+
+Les dades contenen 17 atributs i 2111 registres. El 77% de les dades, però, es van generar de manera sintètica utilitzant les ferramentes “Weka” i el filtre “SMOTE”. Que bàsicament es tracta d’utilitzar veïns propers per a generar noves instàncies sintètiques. La font de les dades no aporta més informació dels paràmetres escollits per a generar les noves dades. L’altre 23% van ser recopilades directament dels usuaris a través d’una plataforma web, mitjançant una enquesta (a la font de les dades hi són les preguntes i les possibles respostes). Aquesta enquesta, va donar com a resultat la recol·lecció dels següents atributs:
+
+Els atributs relacionats amb els hàbits alimentaris són:
+
+* Consum freqüent d’aliments calòrics: FAVC
+* Freqüència de consum de verdures: FCVC
+* Nombre de menjars principals: NCP
+* Consum d’aliments entre menjars: CAEC
+* Consum d’aigua diària: CH2O
+* Consum d’alcohol: CALC
+
+Els atributs relacionats amb la condició física són:
+
+* Monitoreig del consum de calories: SCC
+* Freqüència d’activitat física: FAF
+* Temps usant dispositius tecnològics: TUE
+* Transport utilitzat: MTRANS
+
+També van ser recollides altres variables genèriques com el gènere, l’edat, l’alçada, el pes, si la persona és fumadora i si hi ha historial d’obesitat a la seva família. Finalment, van ser etiquetades totes les dades amb un nou atribut, NObeyesdad, que dóna referència del nivell d’obesitat. Aquest nou atribut va ser creat a partir de l’índex de massa corporal (IMC):
+
+IMC = \frac{Weight}{Height^2}
+
+Com es detalla a la font de les dades, els diferents IMCs obtinguts van ser comparats amb dades proporcionades per la OMS i la Normalitat mexicana per a poder etiquetar-los. Després d’aquest procés les categories van quedar desequilibrades, fet que es va identificar i va tenir-se en compte per a la posterior generació de les dades sintètiques. Finalment, el nivell d’obesitat va ser dividit en set categories.
+
+# Integració i selecció de les dades d’interès a analitzar.
+# Neteja de les dades.
+## Les dades contenen zeros o elements buits? Com gestionaries aquests casos?
+## Identificació i tractament de valors extrems.
+# Anàlisi de les dades.
+## Selecció dels grups de dades que es volen analitzar/comparar (planificació dels anàlisis a aplicar).
+## Comprovació de la normalitat i homogeneïtat de la variància.
+## Aplicació de proves estadístiques per comparar els grups de dades. En funció de les dades i de l’objectiu de l’estudi, aplicar proves de contrast d’hipòtesis, correlacions, regressions, etc. Aplicar almenys tres mètodes d’anàlisi diferents.
+# Representació dels resultats a partir de taules i gràfiques.
+# Resolució del problema. A partir dels resultats obtinguts, quines són les conclusions? Els resultats permeten respondre al problema?
+# Codi: Cal adjuntar el codi, preferiblement en R, amb el que s’ha realitzat la neteja, anàlisi i representació de les dades. Si ho preferiu, també podeu treballar en Python.
+
