@@ -1,20 +1,18 @@
 ---
-title: 'Pràctica 2: Neteja i anàlisi de les dades'
+title: "Pràctica 2: Neteja i anàlisi de les dades"
 author: "Víctor Iruela Garrido i Joel Rosell Mirmi"
-date: "`r format(Sys.Date(),"%e de %B %Y")`"
+date: "Gener 2021"
 output:
   pdf_document:
     toc: yes
     toc_depth: '2'
-  word_document:
-    toc: yes
-    toc_depth: '2'
   html_document:
-    toc: yes
+    highlight: default
     number_sections: yes
+    theme: cosmo
+    toc: yes
     toc_depth: 2
 ---
-
 
 ```{r setup, include=FALSE}
 
@@ -465,7 +463,7 @@ shapiro.test(anova$residuals)
 ```
 Com podem comprovar, tenim un $p_{valor}$ que és molt proper a $0$ (o molt més petit que el nivell de significació escollit, $\alpha$) i, per tant, molt significatiu. Llavors, contràriament al que havíem intuït amb la inspecció del gràfic *"Normal Q-Q"*, podem dir que tenim evidència suficient per rebutjar la hipòtesi nul·la de normalitat als residus. És a dir, no podem assegurar normalitat al nostre model.
 
-D'altra banda, si mirem els gràfics *"Residuals vs Fitted"*, *“Scale-Location”* i *“Residuals vs Factor levels"*, en el cas ideal d'homoscedasticitat esperaríem veure que les línies vermelles als tres gràfics són perfectament horitzontals i que la distribució dels punts per sobre i per sota de la línia són exactament iguals. Al nostre cas, veiem que la línia vermella no és horitzontal a cap dels tres gràfics. També observem que la distribució dels punts al voltant de la línia varia significativament amb els valors ajustats (la quantitat de punts per sobre i per sota de la línia és més o menys semblant). Per tant, sembla ser que no tenim homoscedasticitat.
+D'altra banda, si mirem els gràfics *"Residuals vs Fitted"*, *“Scale-Location”* i *“Residuals vs Factor levels"*, en el cas ideal d'homoscedasticitat esperaríem veure que les línies vermelles als tres gràfics són perfectament horitzontals i que la distribució dels punts per sobre i per sota de la línia són exactament iguals. Al nostre cas, veiem que la línia vermella no és horitzontal a cap dels tres gràfics. També observem que la distribució dels punts al voltant de la línia varia significativament amb els valors ajustats (la quantitat de punts per sobre i per sota de la línia és significativament diferent). Per tant, sembla ser que no tenim homoscedasticitat.
 
 Com en el cas anterior, podem comprovar de manera més precisa l'homoscedasticitat dels residus amb una prova de ***Breusch***.
 
@@ -645,9 +643,9 @@ Els coeficients $\beta$ negatius indiquen que quan la variable que acompaña té
 
 També podem observar que  tots els $p_{valors}$ són significatius, menys pel cas de `FAF` entre $0$ i $1$. Per tant, ambdues variables són explicatives del model, menys pel cas del nivell esmentat.
 
-Com hem fet abans, intentem predir el nivell d'obesitat de dos individus valorant només la seva freqüència d'activitat física: Ambdós fan 3 menjars principals, però el primer té una freqüència d'activitat física de 2 - 3 vegades i el primer de 0 - 1 vegades.
+Com hem fet abans, intentem predir el nivell d'obesitat de dos individus valorant només la seva freqüència d'activitat física: Ambdós fan 3 menjars principals, però el primer té una freqüència d'activitat física de 2 - 3 vegades i el segon de 0 - 1 vegades.
 
-Per tant, pel primer individu tenim:
+Per tant tenim que les probabilitats per a cada individu són:
 
 <CENTER>
 $P_1(Y=1)=0'34$
@@ -863,9 +861,9 @@ Les taules i gràfiques amb els resultats estan localitzades en cada apartat.
   
   - El fet de menjar aliments entre menjars de manera esporàdica, en comptes de fer-ho sempre o freqüentment o no fer-ho, poden condicionar l'aparició d'obesitat.
   
-  - El fet de fer més de tres menjars principals afavoreix que el fet que no aparegui obesitat.
-  
   - El fet de menjar aliments calòrics freqüentment, també pot condicionar l'aparició d'obesitat.
+  
+  - El fet de fer més de tres menjars principals afavoreix que el fet que no aparegui obesitat.
   
   - Fer activitat física amb freqüència disminueix significativament la probabilitat de tenir obesitat.
 
