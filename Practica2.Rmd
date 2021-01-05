@@ -1,8 +1,14 @@
 ---
 title: 'Pràctica 2: Neteja i anàlisi de les dades'
-author: "Víctor Iruela Garrido, Joel Rosell Mirmi"
-date: '`r format(Sys.Date(),"%e de %B %Y")`'
+author: "Víctor Iruela Garrido i Joel Rosell Mirmi"
+date: "`r format(Sys.Date(),"%e de %B %Y")`"
 output:
+  pdf_document:
+    toc: yes
+    toc_depth: '2'
+  word_document:
+    toc: yes
+    toc_depth: '2'
   html_document:
     toc: yes
     number_sections: yes
@@ -11,49 +17,934 @@ output:
 
 
 ```{r setup, include=FALSE}
+
 knitr::opts_chunk$set(echo = TRUE)
+
+# Carreguem les llibreries que utilitzarem:
+library(scales)
+library(cluster)
+library(ggplot2)
+library(gridExtra)
+library(stringr)
+library(grid)
+# library(EDAWR)
+library(dplyr)
+library(fpc)
+library(cluster)
+library(factoextra)
+library(arules)
+library(DescTools)
+library(lmtest)
+
 ```
 
 # Descripció del dataset.
-Perquè és important i quina pregunta/problema pretén respondre?
-
-És un conjunt de dades que està focalitzat en fer una estimació dels nivells d’obesitat, en funció dels hàbits alimentaris i la condició física.
+És un conjunt de dades que està centrat en fer una estimació dels nivells d’obesitat, en funció dels hàbits alimentaris i la condició física.
 
 El joc de dades seleccionat, publicades el 27/08/2019, és un conjunt de registres, que es corresponen amb individus de Colombia, Perú i Mèxic (font de les dades a les referències), amb edats de 14 a 64 anys. De cada individu es recullen una sèrie d’atributs que ens dóna una idea del nivell d’obesitat, els hàbits alimentaris i la condició física.
 
-Les dades contenen 17 atributs i 2111 registres. El 77% de les dades, però, es van generar de manera sintètica utilitzant les ferramentes “Weka” i el filtre “SMOTE”. Que bàsicament es tracta d’utilitzar veïns propers per a generar noves instàncies sintètiques. La font de les dades no aporta més informació dels paràmetres escollits per a generar les noves dades. L’altre 23% van ser recopilades directament dels usuaris a través d’una plataforma web, mitjançant una enquesta (a la font de les dades hi són les preguntes i les possibles respostes). Aquesta enquesta, va donar com a resultat la recol·lecció dels següents atributs:
+Les dades contenen 17 atributs i 2111 registres. El 77% de les dades, però, es van generar de manera sintètica, utilitzant les ferramentes “Weka” i el filtre “SMOTE”. Que bàsicament es tracta d’utilitzar veïns propers per a generar noves instàncies sintètiques. La font de les dades no aporta més informació dels paràmetres escollits per a generar les noves dades. L’altre 23% van ser recopilades directament dels usuaris a través d’una plataforma web, mitjançant una enquesta (a la font de les dades hi són les preguntes i les possibles respostes). Aquesta enquesta, va donar com a resultat la recol·lecció dels següents atributs:
 
 Els atributs relacionats amb els hàbits alimentaris són:
 
-* Consum freqüent d’aliments calòrics: FAVC
-* Freqüència de consum de verdures: FCVC
-* Nombre de menjars principals: NCP
-* Consum d’aliments entre menjars: CAEC
-* Consum d’aigua diària: CH2O
-* Consum d’alcohol: CALC
+* Consum freqüent d’aliments calòrics: `FAVC`
+* Freqüència de consum de verdures: `FCVC`
+* Nombre de menjars principals: `NCP`
+* Consum d’aliments entre menjars: `CAEC`
+* Consum d’aigua diària: `CH2O`
+* Consum d’alcohol: `CALC`
 
 Els atributs relacionats amb la condició física són:
 
-* Monitoreig del consum de calories: SCC
-* Freqüència d’activitat física: FAF
-* Temps usant dispositius tecnològics: TUE
-* Transport utilitzat: MTRANS
+* Monitoreig del consum de calories: `SCC`
+* Freqüència d’activitat física: `FAF`
+* Temps usant dispositius tecnològics: `TUE`
+* Transport utilitzat: `MTRANS`
 
-També van ser recollides altres variables genèriques com el gènere, l’edat, l’alçada, el pes, si la persona és fumadora i si hi ha historial d’obesitat a la seva família. Finalment, van ser etiquetades totes les dades amb un nou atribut, NObeyesdad, que dóna referència del nivell d’obesitat. Aquest nou atribut va ser creat a partir de l’índex de massa corporal (IMC):
+També van ser recollides altres variables genèriques com el gènere, l’edat, l’alçada, el pes, si la persona és fumadora i si hi ha historial d’obesitat a la seva família. Finalment, van ser etiquetades totes les dades amb un nou atribut, `NObeyesdad`, que fa referència al nivell d’obesitat. Aquest nou atribut va ser creat a partir de l’índex de massa corporal (IMC):
 
-IMC = \frac{Weight}{Height^2}
+<CENTER>
+$IMC = \frac{Weight}{Height^2}$
+
+</CENTER>
 
 Com es detalla a la font de les dades, els diferents IMCs obtinguts van ser comparats amb dades proporcionades per la OMS i la Normalitat mexicana per a poder etiquetar-los. Després d’aquest procés les categories van quedar desequilibrades, fet que es va identificar i va tenir-se en compte per a la posterior generació de les dades sintètiques. Finalment, el nivell d’obesitat va ser dividit en set categories.
 
+## Perquè és important i quina pregunta/problema pretén respondre?
+La motivació d'escollir aquest joc de dades ha estat que, està composat per un conjunt d'atributs que ens poden fer arribar a resultats molt interessants; ja que podem valorar els motius que poden donar com a resultat obesitat i generar un risc potencial per a desencadenar problemes cardiovasculars. Llavors, aquest dataset ens permet fer una **gran varietat d'anàlisis** detallats per a obtenir-ne diferents indicadors, dels quals poder extreure diverses conclusions, com per exemple:
+
+* Hi ha més proporció de dones que de homes amb obesitat? De quin tipus?
+* La mitjana de l'índex de massa corporal és més gran en els homes que en les dones?
+* La mitjana de l'índex de massa corporal és més gran en persones que tenen algun cas a la familia, respecte dels que no?
+* L'exercici físic i una alimentació més saludable disminueix les probabilitats de tenir obesitat?
+* Quins hàbits condicionen que hi hagi obesitat? (associació).
+
+
+Com que la major part de les dades estan generades de manera sintètica a partir d'una part relativament petita, podem suposar que hi haurà efectes que es magnifiquin i d'altres que puguin veure's minimitzats. Això haurà de tenir-se en compte en estudis posteriors, tot i que el fet de que els efectes més notoris es magnifiquin, pot facilitar el fet de dividir les dades en grups (clustering), classificar-les, buscar correlacions, etc. A més, el fet de comptar amb més dades ens permet aplicar alguns mètodes estadístics d'anàlisi amb uns resultats més consistents.
+
 # Integració i selecció de les dades d’interès a analitzar.
-# Neteja de les dades.
+
+A continuació, fem una petita exploració de les dades mirant quina estructura tenen i comprovant la quantitat de registres:
+
+```{r message= FALSE, warning=FALSE}
+
+# Primer de tot, carreguem les dades i les assignem a una variable:
+obesity <- read.csv(file="ObesityDataSet_raw_and_data_sinthetic.csv", sep=",")
+
+# Mostrem les primeres files:
+head(obesity)
+
+# Mirem quina és l'estructura de les nostres dades i la longitud del fitxer:
+str(obesity)
+
+NROW(obesity)
+
+```
+
+Efectivament, tenim 2111 registres i 17 atributs.
+
+Veiem que tenim dades quantitatives en format numèric, però les dades qualitatives estan en format `character`. Per tal de poder treballar millor amb les funcions d’R i aquestes dades, farem una primera transformació d’aquests atributs en tipus factor. I tot seguit comprovem els canvis.
+
+```{r message= FALSE, warning=FALSE}
+
+obesity$Gender <- as.factor(obesity$Gender)
+obesity$family_history_with_overweight <- as.factor(obesity$family_history_with_overweight)
+obesity$FAVC <- as.factor(obesity$FAVC)
+obesity$CAEC <- as.factor(obesity$CAEC)
+obesity$SMOKE <- as.factor(obesity$SMOKE)
+obesity$SCC <- as.factor(obesity$SCC)
+obesity$CALC <- as.factor(obesity$CALC)
+obesity$MTRANS <- as.factor(obesity$MTRANS)
+obesity$NObeyesdad <- as.factor(obesity$NObeyesdad)
+
+# Comprovem el resultat:
+str(obesity)
+
+```
+
+Efectivament, ara ja tenim les variables categòriques en tipus factor.
+
+Mitjançant la funció summary() podem fer-nos una primera idea de com estan distribuides les variables categòriques en els seus nivells, així com la mitjana, límits laterals, mediana i quartils de les variables quantitatives.
+
+```{r message= FALSE, warning=FALSE}
+
+summary(obesity)
+
+```
+
+Si mirem les variables quantitatives, veiem que els valors de cadascuna d'elles hi són dins dun rang realista i esperat. Ho analitzarem amb més profunditat en els següents punts.
+
+Com hem vist, tenim 8 variables quantitatives i 9 de qualitatives. Però si mirem a la *"Table 1. Questions of the survey used for initial recollection of information"* que trobem a la font de les dades, veiem que només hauríem de tenir 3 variables quantitatives: l'edat (en anys), l'alçada (en metres) i el pes (en quilograms). I la resta de variables haurien de ser qualitatives, però com hem pogut comprovar, no ho són. Per tant, hem de prendre la desició de si transformem aquestes variables en categòriques o no.
+
+A continuació, fem una representació més visual de les dades quantitatives, en format d’histograma, per tenir una altra visió de la seva distribució i poder comprovar si podem fer alguna transformació adient amb les variables que haurien de ser qualitatives i no ho són, comparant les seves distribucions amb els suposats valors categòrics que haurien de prendre segons *"Table 1. Questions of the survey used for initial recollection of information"*.
+
+```{r message= FALSE, warning=FALSE}
+
+g1 <- ggplot(obesity, aes(Age)) + geom_histogram(fill="green",col="red") +
+  labs(title="Edat (`Age`)")
+g2 <- ggplot(obesity, aes(Height)) + geom_histogram(fill="green",col="red") +
+  labs(title="Alçada (`Height`)")
+g3 <- ggplot(obesity, aes(Weight)) + geom_histogram(fill="green",col="red") +
+  labs(title="Pes (`Weight`)")
+g4 <- ggplot(obesity, aes(FCVC)) + geom_histogram(fill="green",col="red") +
+  labs(title="Freq. consum verdures (`FCVC`)")
+g5 <- ggplot(obesity, aes(NCP)) + geom_histogram(fill="green",col="red") +
+  labs(title="Nº menjars principals (`NCP`)")
+g6 <- ggplot(obesity, aes(CH2O)) + geom_histogram(fill="green",col="red") +
+  labs(title="Consum aigua diària (`CH2O`)")
+g7 <- ggplot(obesity, aes(FAF)) + geom_histogram(fill="green",col="red") +
+  labs(title="Freq. act. física (`FAF`)")
+g8 <- ggplot(obesity, aes(TUE)) + geom_histogram(fill="green",col="red") +
+  labs(title="t usant disp. tec. (`TUE`)")
+grid.arrange(g1, g2, g3, g4, ncol=2)
+grid.arrange(g5, g6, g7, g8, ncol=2)
+
+```
+
+Si mirem les variables que sí esperem que siguin quantitatives: l’edat, l'alçada i el pes, veiem distribucions que es podrien aproximar amb distribucions normals. Pel que fa a la resta, veiem distribucions molt poc uniformes, amb valors molt localitzats (nombres naturals) que s’emporten la majoría dels registre.
+
+Segons la informació que ens aporta la font, els valors que haurien de prendre aquestes variables són:
+
+* Freqüència de consum de verdures als menjars (`FCVC`): *Never*, *Sometimes*, *Always*
+* Nombre de menjars principals diari (`NCP`): *Between 1 and 2*, *Three*, *More than three*
+* Consum d'aigua diària (`CH2O`): *Less than a liter*, *Between 1 and 2 L*, *More than 2 L*
+* Freqüència d'activitat física (`FAF`): *I do not have*, *1 or 2 days*, *2 or 4 days*, *4 or 5 days*
+* temps usant dispositius tecnològics (`TUE`): *0-2 hours*, *3-5 hours*, *More than 5 hours*
+
+Si comparem aquests valors amb les representacinos de les distribucions numèriques que hem fet d'aquestes variables, veiem que el nombre de categories coincideix amb el nombre de valors màxims on són agrupats la majoria dels registres de cadascuna. A més, tots els valors categòrics que hem citat són ordenables i estan ordenats en ordre ascendent, igual que les seves distribucions numèriques. Això ens pot semblar normal, ja que els valors categòrics esmentats són discretitzacions de rangs de números naturals; menys en el cas de la variable `FCVC`, que representen la freqüència de manera abstracta (tot i que *Never* podríem representar-ho amb $0$).
+
+Tot això ens pot fer pensar que aquetes variables van ser recodificades per tal de facilitar el procés de balanceig de les categories de la variable `NObeyesdad` del què ens parla la font i/o de l'aplicació de l'algorisme `Weka` per a la generació de dades sintètiques. D'igual manera, la imputació de valors intermitjos podrien haver estat generats com a conseqüència d'això; després d'haver fet una equivalència amb l'ordre ascendent dels valors categòrics.
+
+Per tot això i perquè tampoc tindria massa sentit fer servir aquestes variables com a numèriques (donades les seves distribucions), discretitzarem aquestes variables basant-nos en els propis valors numèrics que tenim de partida. D'aquesta manera, conservem els rangs numèrics en què venen representades cadascuna de les variables al dataset i classifiquem les variables en el mateix nombre de categories que ens aporta la font. A més, com que estan ordenats en ordre ascendent (els nivells són equivalents), es podria fer una equivalència posterior, simplement renombrant aquests valors pels de *"Table 1. Questions of the survey used for initial recollection of information"*. L'única cosa que pot variar són els registres que estan al límit de dues categoríes; ja que en aquesta nova recodificació ens basem en una distribució que no sabem com ha estat assignada a partir dels valors categòrics inicials.
+
+Fem la discretització esmentada:
+
+```{r message= FALSE, warning=FALSE}
+
+# Discretitzem la variable `NCP`:
+obesity[obesity$NCP < 3,]$NCP <- "<3"
+obesity[obesity$NCP == 3,]$NCP <- "3"
+obesity[obesity$NCP > 3,]$NCP <- ">3"
+obesity$NCP <- as.factor(obesity$NCP)
+
+# Discretitzem la resta de variables:
+obesity["FCVC"] <- cut(obesity$FCVC, breaks = c(0,1,2,3), labels = c("0-1", "1-2", "2-3"))
+obesity["CH2O"] <- cut(obesity$CH2O, breaks = c(0,1,2,3), labels = c("0-1", "1-2", "2-3"))
+obesity["FAF"] <- cut(obesity$FAF, breaks = c(-0.0000001,0.0000001,1,2,3), labels = c("0", "0-1", "1-2", "2-3"))
+obesity["TUE"] <- cut(obesity$TUE, breaks = c(-0.0000001,0.0000001,1,2), labels = c("0", "0-1", "1-2"))
+
+```
+
+Seguidament, fem una representació gràfica de les distribucions dels valors de les dades qualitatives (incloses les que acabem de recodificar).
+
+```{r message= FALSE, warning=FALSE}
+
+# Variables recodificades:
+g9 <- ggplot(summarize(group_by(obesity, FCVC), n=length(FCVC)), aes(x="", y=n, fill=FCVC)) + geom_bar(width = 1, stat = "identity") +
+coord_polar("y", start=0) + ggtitle("Freq. consum verdures (`FCVC`)")
+g10 <- ggplot(summarize(group_by(obesity, NCP), n=length(NCP)), aes(x="", y=n, fill=NCP)) + geom_bar(width = 1, stat = "identity") +
+coord_polar("y", start=0) + ggtitle("Nº menjars principals (`NCP`)")
+g11 <- ggplot(summarize(group_by(obesity, CH2O), n=length(CH2O)), aes(x="", y=n, fill=CH2O)) + geom_bar(width = 1, stat = "identity") +
+coord_polar("y", start=0) + ggtitle("Consum aigua diària (`CH2O`)")
+g12 <- ggplot(summarize(group_by(obesity, FAF), n=length(FAF)), aes(x="", y=n, fill=FAF)) + geom_bar(width = 1, stat = "identity") +
+coord_polar("y", start=0) + ggtitle("Freq. act. física (`FAF`)")
+g13 <- ggplot(summarize(group_by(obesity, TUE), n=length(TUE)), aes(x="", y=n, fill=TUE)) + geom_bar(width = 1, stat = "identity") +
+coord_polar("y", start=0) + ggtitle("t usant disp. tec. (`TUE`)")
+
+# Resta de variables qualitatives:
+g14 <- ggplot(summarize(group_by(obesity, Gender), n=length(Gender)), aes(x="", y=n, fill=Gender)) + geom_bar(width = 1, stat = "identity") +
+coord_polar("y", start=0) + ggtitle("Gènere")
+g15 <- ggplot(summarize(group_by(obesity, family_history_with_overweight), n=length(family_history_with_overweight)), aes(x="", y=n, fill=family_history_with_overweight)) + geom_bar(width = 1, stat = "identity") +
+coord_polar("y", start=0) + ggtitle("Algún cas d'obesitat a la família")
+g16 <- ggplot(summarize(group_by(obesity, FAVC), n=length(FAVC)), aes(x="", y=n, fill=FAVC)) + geom_bar(width = 1, stat = "identity") +
+coord_polar("y", start=0) + ggtitle("Consum freqüent d'aliments calòrics")
+g17 <- ggplot(summarize(group_by(obesity, CAEC), n=length(CAEC)), aes(x="", y=n, fill=CAEC)) + geom_bar(width = 1, stat = "identity") +
+coord_polar("y", start=0) + ggtitle("Consum d'aliments entre menjars")
+g18 <- ggplot(summarize(group_by(obesity, SMOKE), n=length(SMOKE)), aes(x="", y=n, fill=SMOKE)) + geom_bar(width = 1, stat = "identity") +
+coord_polar("y", start=0) + ggtitle("Fumadora")
+g19 <- ggplot(summarize(group_by(obesity, SCC), n=length(SCC)), aes(x="", y=n, fill=SCC)) + geom_bar(width = 1, stat = "identity") +
+coord_polar("y", start=0) + ggtitle("Monitoreig del consum de calories")
+g20 <- ggplot(summarize(group_by(obesity, CALC), n=length(CALC)), aes(x="", y=n, fill=CALC)) + geom_bar(width = 1, stat = "identity") +
+coord_polar("y", start=0) + ggtitle("Consum d'alcohol")
+g21 <- ggplot(summarize(group_by(obesity, MTRANS), n=length(MTRANS)), aes(x="", y=n, fill=MTRANS)) + geom_bar(width = 1, stat = "identity") +
+coord_polar("y", start=0) + ggtitle("Transport utilitzat")
+g22 <- ggplot(summarize(group_by(obesity, NObeyesdad), n=length(NObeyesdad)), aes(x="", y=n, fill=NObeyesdad)) + geom_bar(width = 1, stat = "identity") +
+coord_polar("y", start=0) + ggtitle("Nivell d'obesitat")
+
+grid.arrange(g9, g10, g11, g12, ncol=2)
+grid.arrange(g13, g14, g15, g16, ncol=2)
+grid.arrange(g17, g18, g19, g20, ncol=2)
+grid.arrange(g21, g22, ncol=2)
+
+```
+
+Pel que fa al gènere, tenim aproximadament meitat de dones i meitat d'homes. Pel que fa a la variable `family_history_with_overweight`, la majoria dels individus té algun cas a la família. També la majoria consumeix freqüentment aliments calòrics. A la variable `CAEC` la major part dels registres tenen el valor *"de vegades"* (`Sometimes`). Podem observar que molt poques persones són fumadores i que també molt poques fan monitoreig del consum de calories. També veiem que la major part dels individus en fa un consum puntual d'alcohol i viatja en transport públic. Per últim, pel que fa al nivell d'obesitat, veiem que té una distribució molt uniforme; cosa que ja sabíem perquè a la font de les dades ens expliquen que aquesta variable va ser equilibrada (respecte els seus nivells o categories) en aplicar l'algorisme de creació de les noves dades sintètiques.
+
+Recodifiquem també la variable `NObeyesdad` per tal que suigui més ràpid de visualitzar i perquè poguem representar els valors a les gràfiques. Substituïm els valors com es detalla a continuació:
+
+* $Insufficient\_Weight \rightarrow -1$
+* $Normal\_Weight \rightarrow 0$
+* $Overweight\_Level\_I \rightarrow 1$
+* $Overweight\_Level\_II \rightarrow 2$
+* $Obesity\_Type\_I \rightarrow 3$
+* $Obesity\_Type\_II \rightarrow 4$
+* $Obesity\_Type\_III \rightarrow 5$
+
+```{r message= FALSE, warning=FALSE}
+
+# Reasignem l'ordre dels levels per tal que els nivells d'obesitat apareguin ordenats:
+obesity$NObeyesdad <- factor(obesity$NObeyesdad, levels = levels(obesity$NObeyesdad)[c(1, 2, 6, 7, 3, 4, 5)])
+
+# Renombrem els levels per tal que es puguin mostrar a les gràfiques, però sense cambiar el tipus de variable:
+levels(obesity$NObeyesdad) <- c("-1", "0", "1", "2", "3", "4", "5")
+
+```
+
+A continuació afegim un nou atribut numèric al nostre dataset, l'IMC; que és equivalent a la variable `NObeyesdad`, ja que està discretitzada a partir de l'IMC, tal i com s'ha comentat. Aquest nou atribut el farem servir més endavant.
+
+```{r message= FALSE, warning=FALSE}
+
+obesity["IMC"] <- obesity$Weight / (obesity$Height)^2
+
+# Comprovem que s'ha afegit el nou atribut:
+head(obesity)
+
+# Representem la distribució de la nova variable:
+ggplot(obesity, aes(IMC)) + geom_histogram(fill="green",col="red") +
+  labs(title="Índ. massa corp.(`IMC`)")
+
+```
+
+Finalment, amb la funció `rescale()` normalitzem les nostres variables quantitatives. Aquesta transformació totes les variables queden representades dins del mateix rang i ens facilita les tasques dels anàlisis que farem als següents apartats.
+
+```{r message= FALSE, warning=FALSE}
+
+obesity$Age <- rescale(obesity$Age)
+obesity$Height <- rescale(obesity$Height)
+obesity$Weight <- rescale(obesity$Weight)
+obesity$IMC <- rescale(obesity$IMC)
+
+# Comprovem que les distribucions no han variat:
+g23 <- ggplot(obesity, aes(Age)) + geom_histogram(fill="green",col="red") +
+  labs(title="Edat (`Age`)")
+g24 <- ggplot(obesity, aes(Height)) + geom_histogram(fill="green",col="red") +
+  labs(title="Alçada (`Height`)")
+g25 <- ggplot(obesity, aes(Weight)) + geom_histogram(fill="green",col="red") +
+  labs(title="Pes (`Weight`)")
+g26 <- ggplot(obesity, aes(IMC)) + geom_histogram(fill="green",col="red") +
+  labs(title="Índ. massa corp.(`IMC`)")
+grid.arrange(g23, g24, g25, g26, ncol=2)
+
+```
+
+# Neteja de les dades
+
 ## Les dades contenen zeros o elements buits? Com gestionaries aquests casos?
+Per tal de comprovar si hi ha valors buits, fem l'estadística corresponent:
+
+```{r message= FALSE, warning=FALSE}
+
+# EstadÍstica de valors buits:
+colSums(is.na(obesity))
+colSums(obesity=="")
+
+```
+
+Com es pot observar, no hi ha cap valor buit. Això era d'esperar, ja que a la font de les dades ja s'especifica que aquest problema ja ha estat tractat, Per tant, no hi ha necessitat de fer cap imputació.
+
+En cas que sí haguéssim tingut algun valor buit, hauríem d'haver aplicat algun mètode per tal de solucionar aquest problema. Pel que fa a variables quantitatives, dues solucions típiques són:
+
+* Substitució del valor que manca per la mitjana dels valors que presenta l'atribut en les dades.
+
+* Substituir-lo pel valor més freqüent.
+
+Pel que fa a les variables qualitatives, un mètode típic és el mètode de ***MissForest***:
+
+MissForest és un algoritme d'imputació aleatori per a dades faltants, implementat en R en el paquet `missForest()`. Inicialment imputa  totes les dades que falten utilitzant la mitjana /mediana, després per a cada variable amb valors faltants, MissForest ajusta un bosc  aleatori en la part observada i després fa una predicció la part faltant. Aquest procés d'entrenament i predicció es repeteix en un  procés iteratiu fins que es compleix amb un criteri d'aturada, o s'arriba a un nombre màxim d'iteracions especificades per l'usuari.
+
+
 ## Identificació i tractament de valors extrems.
+Com ja hem vist al `summary` que hem fet al punt 2, sembla que les variables quantitatives són a dins de rangs esperats i que les categòriques estan classificades en els nivells que ens aporta la font, per tant, en una primera aproximació, sembla qeu no hi ha valors atípics. A continuació, però, analitzem amb més profunditat la possible existència de valors extrems a les variables quantitatives.
+
+Fem els respectius diagrames de caixa de totes les variables quantitatives, per comprovar l'existència de valors atípics.
+
+```{r message= FALSE, warning=FALSE}
+
+par(mfrow=c(1,4))
+boxplot(obesity$Age, main="Edat (`Age`)")
+boxplot(obesity$Height, main="Alçada (`Height`)")
+boxplot(obesity$Weight, main="Pes (`Weight`)")
+boxplot(obesity$IMC, main="Índ. massa corp.(`IMC`)")
+
+```
+
+Veiem que no tenim cap valor atípic a la variable `IMC`, però sí que ens trobem outliers a la resta. Analitzem una per una:
+
+* `Age`: Tenim un conjunt important de valors atípics, corresponents a edats que estan bastant per sobre de la mediana. Això ens pot fer intuir que la majoria dels individus que van fer l'enquesta eren persones joves. Per tal de no reduir l'espectre del rang d'edats i poder estudiar la possible correlació entre l'edat i l'obesitat, no es modificaran aquests valors; tot i que el fet de no tenir una representació equilibrada en tot el rang d'edats, pot introduir un biaix important als resultats.
+
+* `Height`: En aquest cas, només tenim un valor atípic. En ser un valor totalment possible i, a més, no estar massa allunyat de la resta del conjunt, tampoc es realitza cap modificació sobre aquest valor.
+
+* `Weight`: Ídem que pel cas de l'alçada (`Height`).
+
+
 # Anàlisi de les dades.
+
 ## Selecció dels grups de dades que es volen analitzar/comparar (planificació dels anàlisis a aplicar).
+Com que ens interessa descriure la relació entre el nivell d’obessitat i cadascuna de les variables descrites, farem diagrames de barres amb els nivells d’obesitat segons la resta d’atributs. Per tal, però, de tenir una representació més informativa que un diagrama de barres ordinari, calcularem les taules de contingència i després les representarem. D’aquesta manera, tindrem una millor idea de les freqüències de cada classe i del percentatge que representa en els diferents nivells d’obesitat.
+
+```{r message= FALSE, warning=FALSE}
+
+# Construïm les respectives taules de contingència:
+table_Gender <- table(obesity$Gender, obesity$NObeyesdad)
+table_family_history_with_overweight <- table(obesity$family_history_with_overweight, obesity$NObeyesdad)
+table_FAVC <- table(obesity$FAVC, obesity$NObeyesdad)
+table_FCVC <- table(obesity$FCVC, obesity$NObeyesdad)
+table_NCP <- table(obesity$NCP, obesity$NObeyesdad)
+table_CAEC <- table(obesity$CAEC, obesity$NObeyesdad)
+table_SMOKE <- table(obesity$SMOKE, obesity$NObeyesdad)
+table_CH2O <- table(obesity$CH2O, obesity$NObeyesdad)
+table_SCC <- table(obesity$SCC, obesity$NObeyesdad)
+table_FAF <- table(obesity$FAF, obesity$NObeyesdad)
+table_TUE <- table(obesity$TUE, obesity$NObeyesdad)
+table_CALC <- table(obesity$CALC, obesity$NObeyesdad)
+table_MTRANS <- table(obesity$MTRANS, obesity$NObeyesdad)
+
+# Representem gràficament les taules:
+col_colors <- c("#0101DF", "#01DF01", "#A5DF00", "#FFFF00", "#FF8000", "#FF0000", "#B40486")
+par(mfrow=c(2,2))
+plot(table_Gender, col = col_colors, main = "Relació amb gènere")
+plot(table_family_history_with_overweight, col = col_colors, main = "Relació amb històric familiar")
+plot(table_FAVC, col = col_colors, main = "Relació amb freq. al. calòrics")
+plot(table_FCVC, col = col_colors, main = "Relació amb consum verdures")
+plot(table_NCP, col = col_colors, main = "Relació amb nº menjars princ.")
+plot(table_CAEC, col = col_colors, main = "Relació amb consum entre menjars")
+plot(table_SMOKE, col = col_colors, main = "Relació amb persona fumadora")
+plot(table_CH2O, col = col_colors, main = "Relació amb consum d'aigua")
+plot(table_SCC, col = col_colors, main = "Relació amb monitoreig calories")
+plot(table_FAF, col = col_colors, main = "Relació amb act. física")
+plot(table_TUE, col = col_colors, main = "Relació amb us disp. tec.")
+plot(table_CALC, col = col_colors, main = "Relació amb consum d'alcohol")
+par(mfrow=c(1,1))
+plot(table_MTRANS, col = col_colors, main = "Relació amb transport utilitzat")
+
+```
+
+Com es pot apreciar, s'observen variacions molt significatives dels nivells d'obesitat en relació amb l'històric familiar, la freqüència d'aliments calòrics, el consum de verdures, el nombre de menjars principals, consum entre menjars, consum d'aigua, monitoreig de calories i consum d'alcohol; mentre que a la resta de variables no s'observa una variabilitat molt evident. Tot i així, no eliminarem cap variable, ja que volem trobar les màximes relacions possibles.
+
+Es pot destacar el cas de la relació amb el gènere, que més o menys manté la proporció dels nivells d'obesitat entre homes i dones, però observem que pel cas dels dos últims nivells no trobem homes al nivell 5 i no trobem dones al nivell 4. És com si els homes mai arribessin al nivell màxim d'obesitat, mentre que les dones passen directament del nivell 3 al 5. Això podria ser degut a que hi han més homes alts que dones altes, en relació al seu pes, i aquest fet condicioni el càlcul de l'IMC i la posterior discretització en els nivells d'obesitat tractats.
+
+Pel cas de la relació amb si la persona és fumadora o no, podem apreciar que sí hi han variacions, però el grup que representa les persones fumadores és molt petit i, per tant, és poc representatiu. Donat això, podríem eliminar aquesta variable per a fer un estudi de regressió.
+
+Si mirem el cas del transport utilitzat, podem apreciar que la majoria de les persones enquestades o van en automòbil o en transport públic, pocs són els que van caminant i molt pocs els que van en bicicleta o moto. També s'observa que pel cas dels que van amb automòbil, no hi ha cap persona del grup 5 (igual que pel cas dels homes). Això ens fa plantejar-nos si la proporció d'homes que utilitzen automòbil és més gran que la de les dones, ja que sabem que gairabé no hi ha cap dona al nivell 4.
+
+A continuació comprovem visualment si les variables quantitatives estan correlacionades, parell a parell.
+
+```{r message= FALSE, warning=FALSE}
+
+# Escollim només les dades quantitatives del dataset:
+plot(obesity[, c(2:4, 18)])
+
+```
+
+Com es pot observar, les variables `Height` i `Weight` estan lleugerament correlacionades. Això és d'esperar, ja que dues persones que tinguin el mateix IMC, si una és més alta que l’altra, aquesta pesarà més. D'altra banda, la variable ``Weight` està fortament correlacionada amb la variable `IMC`; això és normal, donat que amb una alçada donada, com més pes tinguem, més alt serà l'índex de massa corporal.
+
+Si mirem, en canvi, la variable que fa referència a l'edat, veiem que no té correlació amb cap de les altres variables, tot i que sembla que a edats més joves el rang de l'`IMC` arriba més als extrems (fet que pot ser degut a que la majoría dels registres siguin de persones joves i, per tant, tinguin una estadística més àmplia). Una cosa semblant passa amb l'alçada, que sí que hem vist que estava una mica correlacionada amb el pes, però no amb les altres dues variables, sobretot amb l'IMC, que és la que més ens podia interessar. El fet que `Height` no estigui correlacionada amb l'`IMC`, ens fa pensar que el nivell d'obesitat és independent de l'alçada.
+
+Per aquests motius, eliminem les variables `Age`, `Height` i `Weight`, ja que l'edat i l'alçada no ens aporten informació sobre la variabilitat observada i el pes és una transcripció de l'`IMC`.
+
+```{r message= FALSE, warning=FALSE}
+
+# Eliminem aquests atributs del nostre dataset, escollint només les altres variables:
+obesity <- obesity[, c(1, 5:18)]
+
+```
+
 ## Comprovació de la normalitat i homogeneïtat de la variància.
-## Aplicació de proves estadístiques per comparar els grups de dades. En funció de les dades i de l’objectiu de l’estudi, aplicar proves de contrast d’hipòtesis, correlacions, regressions, etc. Aplicar almenys tres mètodes d’anàlisi diferents.
+Per tal de comprovar la normalitat i la homogeneitat (homoscedasticitat) de la variància, contruïm un model ANOVA multifactorial.
+
+Primer de tot, plantejem les hipòtesis que ens permetran concloure si hi ha normalitat i homogeneitat:
+
+Hipòtesis de normalitat:
+
+- $Nul·la \rightarrow H_0:$ Tenim normalitat al model (als residus)
+
+- $Alternativa \rightarrow H_1:$ No tenim normalitat al model (als residus)
+
+ 
+Hipòtesis d'homoscedasticitat:
+
+- $Nul·la \rightarrow H_0:$ Tenim homoscedasticitat al model (als residus)
+
+- $Alternativa \rightarrow H_1:$ No tenim homoscedasticitat al model (als residus)
+
+```{r message= FALSE, warning=FALSE}
+
+# Construïm el model ANOVA:
+anova <- aov(IMC ~ Gender + family_history_with_overweight + FAVC + FCVC + NCP + CAEC + SMOKE + CH2O + SCC + FAF + TUE + CALC + MTRANS, data = obesity)
+
+```
+
+Per tal de fer-nos una primera idea, apliquem la funció `plot()` al model per tal d'obtenir els gràfics *"Normal Q-Q"*, *"Residuals vs Fitted"*, *“Scale-Location”* i *“Residuals vs Factor levels"*.
+
+```{r message= FALSE, warning=FALSE}
+
+# Representem gràficament:
+plot(anova)
+
+```
+
+Si mirem el gràfic *"Normal Q-Q"*, en un cas ideal de normalitat, esperaríem veure tots els punts sobre la línia discontinua. En el nostre cas podem observar que, tot i que hi ha alguns punts que no estan alineats, la gran majoría de punts sí que ho estan. Per tant, enfront d’aquest resultat podem intuir que, el fet que els residus es distribueixin de manera normal és una hipòtesi raonable.
+
+Una vegada analitzat visualment el gràfic, hem de realitzar algun test per tal de comprovar si realment hi ha normalitat. Prenent un nivell de significació típic, com per exemple $\alpha=0'05$, podem fer un test de ***Shapiro-Wilk***:
+
+```{r message= FALSE, warning=FALSE}
+
+# Realitzem el test 'Shapiro-Wilk':
+shapiro.test(anova$residuals)
+
+```
+Com podem comprovar, tenim un $p_{valor}$ que és molt proper a $0$ (o molt més petit que el nivell de significació escollit, $\alpha$) i, per tant, molt significatiu. Llavors, contràriament al que havíem intuït amb la inspecció del gràfic *"Normal Q-Q"*, podem dir que tenim evidència suficient per rebutjar la hipòtesi nul·la de normalitat als residus. És a dir, no podem assegurar normalitat al nostre model.
+
+D'altra banda, si mirem els gràfics *"Residuals vs Fitted"*, *“Scale-Location”* i *“Residuals vs Factor levels"*, en el cas ideal d'homoscedasticitat esperaríem veure que les línies vermelles als tres gràfics són perfectament horitzontals i que la distribució dels punts per sobre i per sota de la línia són exactament iguals. Al nostre cas, veiem que la línia vermella no és horitzontal a cap dels tres gràfics. També observem que la distribució dels punts al voltant de la línia varia significativament amb els valors ajustats (la quantitat de punts per sobre i per sota de la línia és més o menys semblant). Per tant, sembla ser que no tenim homoscedasticitat.
+
+Com en el cas anterior, podem comprovar de manera més precisa l'homoscedasticitat dels residus amb una prova de ***Breusch***.
+
+```{r message= FALSE, warning=FALSE}
+
+# Fem la prova de 'Breusch':
+bptest(anova)
+
+```
+
+Anàlogament al cas de l'anàlisi de normalitat i confirmant el que ja intuíem amb la inspecció dels gràfics, tenim un $p_{valor}$ molt significatiu i, per tant, hem de rebutjar la hipòtesi nul·la d'homoscedasticitat als residus. No podem assegurar l'homoscedasticitat del model.
+
+Segons el que hem vist, no podem verificar les premisses de normalitat i homoscedasticitat. Per tant, podem aplicar un test no paramètric, com per exemple el test de ***Kruskal-Wallis***. Aplicant aquest test, podem contrastar si hi ha diferències entre els individus segons les categories assignades a cada variable.
+
+Més concretament, el test es basa en les següents hipòtesis:
+
+- $Nul·la \rightarrow H_0:$ La variable resposta és la mateixa a totes les poblacions valorades.
+
+- $Alternativa \rightarrow H_1:$ La variable resposta és diferent en alguna de les poblacions.
+
+Fem el test per a la variable `IMC` en funció de cada variable, per tal de comprovar si varia en base a les catgories de cada atribut. Per tant, hem de realitzar 13 tests i comprovar quina és la hipòtesi acceptada per a cada variable. 
+
+```{r message= FALSE, warning=FALSE}
+
+# Apliquem el test de 'Kruskal-Wallis' a les 13 variables dependents:
+test_Gender <- kruskal.test(obesity$IMC, obesity$Gender)
+test_family_history_with_overweight <- kruskal.test(obesity$IMC, obesity$family_history_with_overweight)
+test_FAVC <- kruskal.test(obesity$IMC, obesity$FAVC)
+test_FCVC <- kruskal.test(obesity$IMC, obesity$FCVC)
+test_NCP <- kruskal.test(obesity$IMC, obesity$NCP)
+test_CAEC <- kruskal.test(obesity$IMC, obesity$CAEC)
+test_SMOKE <- kruskal.test(obesity$IMC, obesity$SMOKE)
+test_CH2O <- kruskal.test(obesity$IMC, obesity$CH2O)
+test_SCC <- kruskal.test(obesity$IMC, obesity$SCC)
+test_FAF <- kruskal.test(obesity$IMC, obesity$FAF)
+test_TUE <- kruskal.test(obesity$IMC, obesity$TUE)
+test_CALC <- kruskal.test(obesity$IMC, obesity$CALC)
+test_MTRANS <- kruskal.test(obesity$IMC, obesity$MTRANS)
+
+# Construïm un DataFrame per mostrar els resultats:
+IMC_vs_test_variable <- c("Gender", "family_history_with_overweight", "FAVC", "FCVC", "NCP",
+                          "CAEC", "SMOKE", "CH2O", "SCC", "FAF", "TUE", "CALC", "MTRANS")
+
+chi_sq <- c(test_Gender$statistic, test_family_history_with_overweight$statistic, test_FAVC$statistic,
+            test_FCVC$statistic, test_NCP$statistic, test_CAEC$statistic, test_SMOKE$statistic,
+            test_CH2O$statistic, test_SCC$statistic, test_FAF$statistic, test_TUE$statistic,
+            test_CALC$statistic, test_MTRANS$statistic)
+
+df <- c(test_Gender$parameter, test_family_history_with_overweight$parameter, test_FAVC$parameter,
+        test_FCVC$parameter, test_NCP$parameter, test_CAEC$parameter, test_SMOKE$parameter,
+        test_CH2O$parameter, test_SCC$parameter, test_FAF$parameter, test_TUE$parameter,
+        test_CALC$parameter, test_MTRANS$parameter)
+
+p_val <- c(test_Gender$p.value, test_family_history_with_overweight$p.value, test_FAVC$p.value,
+           test_FCVC$p.value, test_NCP$p.value, test_CAEC$p.value, test_SMOKE$p.value, test_CH2O$p.value,
+           test_SCC$p.value, test_FAF$p.value, test_TUE$p.value, test_CALC$p.value, test_MTRANS$p.value)
+
+data.frame(IMC_vs_test_variable, chi_sq, df, p_val)
+
+```
+
+Veiem que tenim $p_{valors}$ molt significatius als tests realitzats amb totes les variables, menys en els casos de `Gender` i `SMOKE`. El fet que el $p_{valors}$ no sigui significatiu en els tests d'aquestes variables, vol dir que no podem rebutjar la hipòtesi nul·la en aquests dos casos i concloure que **no hi ha diferències significatives entre els individus de les diferents categories de les variables `Gender` i `SMOKE`**.
+
+D'altra banda, el fet que el $p_{valors}$ sí que sigui significatiu a la resta de variables, vol dir que podem rebutjar la hipòtesi nul·la, amb gairabé un $100\%$ de nivell de confiança, i concloure que **sí hi ha diferències significatives entre els individus de les diferents categories d'aquestes variables**
+
+Al *DataFrame* amb els resultats, la columna *"df"* (graus de llibertat), ens aporta informació de en quants grups (categories) el test troba una diferència significativa. Per exemple, per a la variable `family_history_with_overweight` el test ha trobat significància en la diferència d'almenys 1 parell de grups, pel cas de `NCP` 2 parells de grups, per a `FAF` de 3 parells de grups, etc.
+
+
+# Aplicació de proves estadístiques per comparar els grups de dades. En funció de les dades i de l’objectiu de l’estudi, aplicar proves de contrast d’hipòtesis, correlacions, regressions, etc. Aplicar almenys tres mètodes d’anàlisi diferents.
+Com ja hem vist a l'apartat anterior, no podem assumir normalitat ni homoscedasticitat al nostre model, motiu pel qual hem d'aplicar tests no paramètrics. Per tant, no podem anàlisis d'inferències per poder respondre a les preguntes inicials.
+
+Arribats a aquest punt, podem aplicar el test de comparació múltiple de *Scheffé*, que ens dóna informació de si la mitjana de la variable explicada varia en els diferents grups de les diferents variables i en quins d'aquests ho fa.
+
+El test es basa en les següents hipòtesi:
+
+- $Nul·la \rightarrow H_0:$ Les mitjanes entre els grups són iguals.
+
+- $Alternativa \rightarrow H_1:$ Les mitjanes entre els grups són diferents.
+
+Allà a on tenim un $p_{valor}$ molt significatiu, voldrà dir que la mitjana és significativament diferent per a aquell parell de grups.
+
+```{r message= FALSE, warning=FALSE}
+
+# Apliquem el test 'PostHocTest':
+PostHocTest(anova, method = "scheffe")
+
+```
+
+* La mitjana de l'índex de massa corporal és més gran en els homes que en les dones?
+  
+  Si mirem la variable `Gender`, podem veure que té un $p_{valor}$ que no és significatiu. Això indica que **no podem rebutjar la hipòtesi nul·la** i acceptar que **les mitjanes entre els grups no són diferents**. És a dir, la mitjana de l´índex de massa corporal dels homes **no** és més gran que el de les dones.
+
+* La mitjana de l'índex de massa corporal és més gran en persones que tenen algun cas a la familia, respecte dels que no?
+
+  Si mirem la variable `family_history_with_overweight` veiem que tenim un $p_{valor}$ molt significatiu. Això indica que **hem de rebutjar la hipòtesi nul·la** i acceptar que **les mitjanes entre els grups són diferents**. És a dir, la mitjana de l´índex de massa corporal de de les persones que tenen algun cas a la familia, és més gran que la de les persones que no en tenen cap.
+  
+  
+## Model de regressió lineal múltiple
+Per tal de poder predir l'índex de massa corporal d'una persona, en funció de la resta d'atributs, elaborem un model de regressió lineal múltiple amb regressors qualitatius.
+
+Com hem vist en el test de ***Sheffé***, hi han algunes variables on la mitjana de l'`IMC` no varia significativament en cap parell de grups. Llavors, basem el nostre model només en aquelles variables que presenten variacions significatives entre algun parell de grups. Aquestes variables són: `family_history_with_overweight`, `FAVC`, `FCVC`, `NCP`, `CAEC`, `CH2O`, `FAF` i `TUE`.
+
+```{r message= FALSE, warning=FALSE}
+
+# Model de regressió lineal sobre la variable `IMC`:
+multipleReg_obesity <- lm(obesity$IMC ~ obesity$family_history_with_overweight + obesity$FAVC +
+                            obesity$FCVC + obesity$NCP + obesity$CAEC + obesity$CH2O + obesity$FAF +
+                            obesity$TUE, data = obesity)
+summary(multipleReg_obesity)
+
+```
+Com podem observar, el model trobat és el següent:
+
+<CENTER>
+$\hat{y} = \hat{\beta_0}+\hat{\beta_1}x_{family}+\hat{\beta_2}x_{FAVC}+\hat{\beta_3}x_{FCVC_{1-2}}+\hat{\beta_4}x_{FCVC_{2-3}}+\hat{\beta_5}x_{NCP_{>3}}+\hat{\beta_6}x_{NCP_{3}}+\hat{\beta_7}x_{CAEC_{freq}}+\hat{\beta_8}x_{CAEC_{no}}$
+
+$$+\hat{\beta_9}x_{CAEC_{sometimes}}+\hat{\beta_{10}}x_{CH2O_{1-2}}+\hat{\beta_{11}}x_{CH2O_{2-3}}+\hat{\beta_{12}}x_{FAF_{0-1}}+\hat{\beta_{13}}x_{FAF_{1-2}}+\hat{\beta_{14}}x_{FAF_{2-3}}+\hat{\beta_{15}}x_{TUE_{0-1}}+\hat{\beta_{16}}x_{TUE_{1-2}}  = $$
+
+$0'080+0'171x_{family}+0'065x_{FAVC}+0'027x_{FCVC_{1-2}}+0'104x_{FCVC_{2-3}}-0'136x_{NCP_{>3}}+0'054x_{NCP_{3}}-0'082x_{CAEC_{freq}}+0'067x_{CAEC_{no}}$
+
+$$+0'079x_{CAEC_{sometimes}}+0'008x_{CH2O_{1-2}}+0'060x_{CH2O_{2-3}}-0'023x_{FAF_{0-1}}-0'009x_{FAF_{1-2}4}-0'116x_{FAF_{2-3}}+0'031x_{TUE_{0-1}}-0'040x_{TUE_{1-2}}$$
+
+</CENTER>
+
+amb un coeficient de determinació ajustat de:
+
+<CENTER>
+$R^2 = 0'511$
+
+</CENTER>
+
+Per tant, aquest model explica el 51′1% de la variabilitat total de les observacions. També podem apreciar que el el valor d’$R^2$ ajustat és similar al valor sense ajustar, la qual cosa ens indica que el model conté predictors útils.
+
+El terme independent ens diu quin seria el valor de l'`IMC` en ser cero la resa de regressors. La resta de paràmetres $\hat{\beta}$ es defineixen com la mitjana d'unitats que el nivell en questió (de la variable donada) està per sobre del nivell de referència. Per exemple, a la variable `NCP` el nivell de referència és $<3$, per tant, el paràmetre $\hat{\beta_5} = -0'136$ ens informa que el fet que l'individu faci més de tres menjars principals, disminueix en $0'136$ unitats l'`IMC`.
+
+D'altra banda, si observem els diferents $p_{valors}$, veiem que per a $\hat{\beta_3}$, $\hat{\beta_{10}}$ i $\hat{\beta_{13}}$ no són significatius. Per tant, podem dir que aquests regressors no són explicatius del model. En canvi, per a la resta tenim $p_{valors}$ molt significatius i podem afirmar amb un nivell de confiança proper al $100\%$ que sí són explicatius del model.
+
+Finalment, si fem un contrast global del model, veiem que tenim un estadístic de contrast (distribució *F de Snedecor* amb $16$ i $2094$ graus de llibertat), $f=139$ bastant gran (bastant superior a 1) i un $p_{valor}<2′2∗10^{−16}$ molt significatiu. Això ens indica amb un nivell de confiança molt proper a $100\%$ que hi ha relació lineal entre la variable ‘IMC’ i alguna de les explicatives. Per tant, el model en conjunt també és significatiu.
+
+A continuació fem la predicció de l'`IMC` per a dos perfils d'individus molt diferents. Pel primer individu suposem que no té històric de casos d'obesitat a la familia, no consumeix amb freqüència aliments calòrics, consumeix verdures de 2 - 3 vegades, fa 3 menjars principals, consumeix de vegades aliments entre menjars, fa un consum d'aigua de 1 - 2 litres, fa una freqüència d'activitat física de 2 - 3 vegades i passa de 0 - 1h amb dispositius tecnològics.
+
+Llavors, l'equació queda com:
+
+$\hat{y_1} = 0'104+0'054+0'079+0'008-0'116+0'031=0'160$
+
+Comparem el resultat amb un individu amb les mateixes condicions, però canviant la freqüència d'activitat física de 0 - 1 i que consumeix amb freqüència aliments calòrics:
+
+$\hat{y_2} = 0'065+0'104+0'054+0'079+0'008-0'022+0'031=0'319$
+
+Comparant els resultats, com ja esperàvem, veiem que l'individu que fa més exercici i no consumeix aliments calòrics amb freqüència té un `IMC` inferior a l'altre.
+
+## Model de regressió logística
+A continuació fem un model de regressió logística per poder predir quina és la probabilitat de tenir algun tipus d'obesitat (tipus I, II i III). Per tant, hem de recodificar la variable `NObeyesdad` per tal de posar els nivells en els que no hi ha obesitat (inferior al normal, normal, sobrepes tipus I i sobrepes tipus II) com a un únic nivell de referència.
+
+```{r message= FALSE, warning=FALSE}
+
+# Assignem el conjunt de dades a una altra variable i fem la recodificació dels nivells:
+obesity2 <- obesity
+levels(obesity2$NObeyesdad) <- c("0", "0", "0", "0", "1", "1", "1")
+
+# Model de regressió lineal de `NObeyesdad` sobre la variable `NCP`:
+logReg_obesity <- glm(obesity2$NObeyesdad ~  obesity2$NCP + obesity2$FAF, data = obesity2, family = binomial())
+summary(logReg_obesity)
+
+```
+
+El model trobat és:
+
+<CENTER>
+$P(Y=1)=\frac{exp(\beta_0+\beta_1X_{NCP_{<3}}+\beta_2X_{NCP_{3}}+\beta_3X_{FAF_{0-1}}+\beta_4X_{FAF_{1-2}}+\beta_5X_{FAF_{2-3}})}{1+exp(\beta_0+\beta_1X_{NCP_{<3}}+\beta_2X_{NCP_{3}}+\beta_3X_{FAF_{0-1}}+\beta_4X_{FAF_{1-2}}+\beta_5X_{FAF_{2-3}})}=$
+
+$$\frac{exp(-0'449-2'708X_{NCP_{<3}}+0'590X_{NCP_{3}}+0'048X_{FAF_{0-1}}+0'537X_{FAF_{1-2}}-0'790X_{FAF_{2-3}})}{1+exp(-0'449-2'708X_{NCP_{<3}}+0'590X_{NCP_{3}}+0'048X_{FAF_{0-1}}+0'537X_{FAF_{1-2}}-0'790X_{FAF_{2-3}})}$$
+
+</CENTER>
+
+Els coeficients $\beta$ negatius indiquen que quan la variable que acompaña té contribució, fa que la probabilitat de trobar obesitat disminueixi.
+
+També podem observar que  tots els $p_{valors}$ són significatius, menys pel cas de `FAF` entre $0$ i $1$. Per tant, ambdues variables són explicatives del model, menys pel cas del nivell esmentat.
+
+Com hem fet abans, intentem predir el nivell d'obesitat de dos individus valorant només la seva freqüència d'activitat física: Ambdós fan 3 menjars principals, però el primer té una freqüència d'activitat física de 2 - 3 vegades i el primer de 0 - 1 vegades.
+
+Per tant, pel primer individu tenim:
+
+<CENTER>
+$P_1(Y=1)=0'34$
+
+</CENTER>
+
+<CENTER>
+$P_2(Y=1)=0'55$
+
+</CENTER>
+
+Com es pot apreciar, el segon individu té més probabilitat de tenir obesitat que el primer.
+
+
+## Arbre de desició: associació
+Per tal de comprovar si podem extreure algunes relacions interessants entre diferents indicadors, fem un arbre de desició, però escollint només aquelles variables que hem vist que tenen un impacte més significatiu en explicar la variabilitat observada de l'`IMC`. Aquestes variables són: `family_history_with_overweight`, `FAVC`, `NCP`, `CAEC`, `FAF.`
+
+```{r message= FALSE, warning=FALSE}
+
+# Escollim les dades amb només les variables a analitzar:
+obesity3 <- obesity2[,c(2:3, 5:6, 10, 14)]
+
+# Comprovem que hem seleccionat bé les dades:
+str(obesity2)
+
+```
+
+Per a poder avaluar l’arbre de decisió, necessitem dividir el conjunt de dades en un conjunt d’entrenament i un conjunt de prova. El conjunt d’entrenament consisteix en un subconjunt de l’original, que utilitzarem per a elaborar un primer model. D’altra banda, el conjunt de prova correspon amb el subconjunt complementari de les dades originals i l’utilitzarem per a avaluar la qualitat del model trobat. Per tal de seleccionar els subconjuts, farem servir la proporció típica que es fa servir en aquests casos. Reservem 2/3 de les dades per al conjunt d’entrenament i 1/3 per al conjunt de prova.
+
+```{r message= FALSE, warning=FALSE}
+
+# Seleccionem l'atribut de sortida i l'assignem a una variable:
+y <- obesity3[,6] 
+
+# Seleccionem els atributs d'entrada i els hi asssignem una altra variable:
+X <- obesity3[,c(1:5)] 
+
+# Assignem els conjunts d'entrenament i de prova:
+set.seed(555)
+indexes = sample(1:nrow(obesity3), size=floor((2/3)*nrow(obesity3)))
+trainX <- X[indexes,]
+trainy <- y[indexes]
+testX  <- X[-indexes,]
+testy  <- y[-indexes]
+
+```
+
+Com que, en principi, les dades estan registrades en ordre aleatori, no apliquem cap funció per “randomitzar” les variables. A continuació, però, inspeccionem de forma visual les taules de contingència d’ambdós conjunts.
+
+```{r message= FALSE, warning=FALSE}
+
+# Construïm les respectives taules de contingència pel conjunt d'entrenament:
+table_family_history_with_overweight_train <- table(trainX$family_history_with_overweight, trainy)
+table_FAVC_train <- table(trainX$FAVC, trainy)
+table_NCP_train <- table(trainX$NCP, trainy)
+table_CAEC_train <- table(trainX$CAEC, trainy)
+table_FAF_train <- table(trainX$FAF, trainy)
+
+# Construïm les respectives taules de contingència pel conjunt de prova:
+table_family_history_with_overweight_test <- table(testX$family_history_with_overweight, testy)
+table_FAVC_test <- table(testX$FAVC, testy)
+table_NCP_test <- table(testX$NCP, testy)
+table_CAEC_test <- table(testX$CAEC, testy)
+table_FAF_test <- table(testX$FAF, testy)
+
+# Representem gràficament les taules del conjunt d'entrenament i de prova:
+col_colors_train <- c("blue", "yellow")
+col_colors_test <- c("green", "orange")
+
+par(mfrow=c(2,2))
+plot(table_family_history_with_overweight_train, col = col_colors_train, main = "Rel. amb històric (train)")
+plot(table_family_history_with_overweight_test, col = col_colors_test, main = "Rel. amb històric (test)")
+plot(table_FAVC_train, col = col_colors_train, main = "Rel. amb `FAVC` (train)")
+plot(table_FAVC_test, col = col_colors_test, main = "Rel. amb `FAVC` (test)")
+plot(table_NCP_train, col = col_colors_train, main = "Rel. amb `NCP` (train)")
+plot(table_NCP_test, col = col_colors_test, main = "Rel. amb `NCP` (test).")
+plot(table_CAEC_train, col = col_colors_train, main = "Rel. amb `CAEC` (train)")
+plot(table_CAEC_test, col = col_colors_test, main = "Rel. amb `CAEC` (test)")
+par(mfrow=c(1,2))
+plot(table_FAF_train, col = col_colors_train, main = "Rel. amb `FAF` (train)")
+plot(table_FAF_test, col = col_colors_test, main = "Rel. amb `FAF` (test)")
+
+```
+
+Com podem comprovar, les proporcions es mantenen, gairabé no hi ha diferències entre els dos conjunts. Per tant, podem assegurar que no obtindrem classificadors esbiaixats pels valors que conté cada mostra.
+
+A continuació creem l’arbre de desició usant les dades d’entrenament. Utilitzem el **mètode C50**.
+
+```{r message= FALSE, warning=FALSE}
+
+trainy = as.factor(trainy)
+model <- C50::C5.0(trainX, trainy, rules=TRUE )
+summary(model)
+
+```
+
+Com podem observar al `summary()` del nostre model, l'arbre obtingut classifica de manera errònia $323$ casos dels $1407$ donats, amb una taxa d'error del $20'2\%$.
+
+En aplicar la condició $rules = TRUE$ en el nostre model, hem pogut imprimir les regles de desició directament; les mostrem a continuació:
+
+1) `family_history_with_overweight` = "no" $\rightarrow$ **Sense obesitat**. Validesa: $97'0\%$
+
+2) `CAEC` = "Always", "Frequently" o "no" $\rightarrow$ **Sense obesitat**. Validesa: $95'4\%$
+
+3) `NCP` = ">3" $\rightarrow$ **Sense obesitat**. Validesa: $94'5\%$
+
+4) `FAVC` = "no" $\rightarrow$ **Sense obesitat**. Validesa: $91'6\%$
+
+5) `FAF` = "2-3" $\rightarrow$ **Sense obesitat**. Validesa: $76'6\%$
+
+6) `family_history_with_overweight` = "yes"
+
+    i `FAVC` = "yes"
+    
+    i `NCP` = "<3" o "3"
+  
+    i `CAEC` = "Sometimes"
+  
+    i `FAF` = "0", "0-1" o "1-2" $\rightarrow$ **Amb obesitat**. Validesa: $72'4\%$
+
+Mostrem a continuació l'arbre obtingut:
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+
+model <- C50::C5.0(trainX, trainy)
+plot(model)
+
+```
+
+Mirant el gràfic del model i amb les regles de desició extretes del model, podem concloure que hi ha variables que predominen per sobre d'altres a l'hora de classificar. Hi ha un ordre de preferència a l'hora de determinar si un individu tindrà obesitat o no, en base als valors que prenen els seus atributs. És a dir, si per exemple tenim que `family_history_with_overweight` = "no", ja no fa falta mirar la resta de variables. Tenim directament la probabilitat. Si, en canvi, el valor és "yes", hem de continuar mirant l'arbre (fent preguntes a la resta de variables); mirarem, llavors la variable `CAEC` i, si és igual a "Always", "Frequently" o "no", igual que al pas anterior, ja tindrem la probabilitat determinada. En canvi, si `CAEC` = "Sometimes", haurem de continuar mirant l'arbre. L'ordre a l'hora de classificar, mirant cada variable, segons la seva preferència és:
+
+<CENTER>
+$family\_history\_with\_overweight \rightarrow CAEC \rightarrow NCP \rightarrow FAVC \rightarrow FAF$
+
+</CENTER>
+
+Veiem que l'històric familiar és el fet més determinant per a saber si l'individu tindrà obesitat, mentre que la freqüència d'activitat física és el que menys, essent més determinants els hàbits alimentaris.
+
+Ara utilitzarem les dades de prova que ens hem reservat per a predir la seva classe a partir del model trobat, comprovant així la seva qualitat.
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+
+# Apliquem la funció `predict()` per a comparar la previsió del model amb les dades de prova i la guardem en una variable:
+predicted_model <- predict(model, testX, type="class")
+
+# Mostrem la qualitat del model:
+print(sprintf("La precisió de ´l'arbre és: %.4f %%",100*sum(predicted_model == testy) / length(predicted_model)))
+
+```
+Per tant, la **qualitat de la predicció** ens diu que el nostre model ha classificat de manera correcte el $77'4\%$ dels cassos de prova.
+
+Com que només tenim dues classes, podem analitzar la qualitat de la predcció amb la matriu de confusió que identifica els tipus d'errors comesos.
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+
+mat_conf <- table(testy,Predicted=predicted_model)
+mat_conf
+
+```
+
+Com podem veure, pels cassos de persones sense obesitat, ha classificat bé el $66'6\%$. Mentre que pels cassos de persones amb obesitat, classifica bé entorn el $89'9\%$.
+
+La precisió de l'arbre obtinguda, la podríem haver calculat mitjançant la matriu de confusió com:
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+
+porcentaje_correct <- 100 * sum(diag(mat_conf)) / sum(mat_conf)
+print(sprintf("El %% de registres correctament classificats és: %.4f %%",porcentaje_correct))
+
+```
+
+També podem utilitzar el paquet `gmodels` per a obtenir informació més completa:
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+
+if(!require(gmodels)){
+    install.packages('gmodels', repos='http://cran.us.r-project.org')
+    library(gmodels)
+}
+
+CrossTable(testy, predicted_model,prop.chisq  = FALSE, prop.c = FALSE, prop.r =FALSE,dnn = c('Reality', 'Prediction'))
+
+```
+
+Tenim la mateixa informació que a la matriu de confusió, però aquí tenim el nombre total i parcial de registres, a més de la proporció que representa cada valor sobre el total, de manera que ens és més fàcil treure percentatges d'encertats.
+
+
 # Representació dels resultats a partir de taules i gràfiques.
+Les taules i gràfiques amb els resultats estan localitzades en cada apartat.
+
+
 # Resolució del problema. A partir dels resultats obtinguts, quines són les conclusions? Els resultats permeten respondre al problema?
+
+* Hi ha més proporció de dones que de homes amb obesitat? De quin tipus?
+
+  Com hem vist al llarg de l'estudi, no podem dir que la mitjana de l'`IMC` dels homes sigui més gran que el de les dones, però a la part de preprocessat sí que hem observat que la proporció d'homes i dones està més o menys igualment distribuïda, però és destacable que gairabé no hi ha dones amb nivell II d'obesitat i que gairabé no hi ha homes amb nivell III d'obesitat.
+
+* La mitjana de l'índex de massa corporal és més gran en els homes que en les dones?
+
+  Com ja hem dit en la resposta anterior, no podem dir que l'índex de massa corporal sigui més gran en el cas dels homes que en el de les dones.
+
+* La mitjana de l'índex de massa corporal és més gran en persones que tenen algun cas a la familia, respecte dels que no?
+
+  Com hem pogut veure a l'estudi no paramètric, la diferència entre mitjanes de l'`IMC` entre persones amb algun cas d'obesitat a la familia és significativament diferent que per les persones que no tenen cap cas a la familia. Amb aquest resultat i inspeccionant la distribucions de les proporcions del nivell d'obesitat en base a la variable esmentada, podem dir que les persones sense cap cas a la falilia tenen tendència a **no** tenir obesitat de cap tipus.
+
+* L'exercici físic i una alimentació més saludable disminueix les probabilitats de tenir obesitat?
+
+  Tal i com hem vist a l'apartat de regressió lineal i logística, en comparar dos individus; un amb una freqüència d'activitat baixa i una alimentació menys saludable té un índex de massa corporal més alt que un individu amb una freqüència d'activitat alta i una alimentació saludable. D'igual manera, un individu del primer tipus tindrà més probabilitats de tenir obesitat que no pas un individu del segon tipus.
+
+* Quins hàbits condicionen que hi hagi obesitat? (associació).
+
+  Podem dir que els hàbits que condicionen que hi hagi obesitat són:
+  
+  - El fet de menjar aliments entre menjars de manera esporàdica, en comptes de fer-ho sempre o freqüentment o no fer-ho, poden condicionar l'aparició d'obesitat.
+  
+  - El fet de fer més de tres menjars principals afavoreix que el fet que no aparegui obesitat.
+  
+  - El fet de menjar aliments calòrics freqüentment, també pot condicionar l'aparició d'obesitat.
+  
+  - Fer activitat física amb freqüència disminueix significativament la probabilitat de tenir obesitat.
+
+
 # Codi: Cal adjuntar el codi, preferiblement en R, amb el que s’ha realitzat la neteja, anàlisi i representació de les dades. Si ho preferiu, també podeu treballar en Python.
+Codi adjunt al repositori:
+
+  https://github.com/Joudelbosc/Practica2
+
+******
+******
+
+# Contribucions
+
+![an image caption Source: Ultimate Funny Dog Videos Compilation 2013.](D:\Documents master\2n_Semestre\Tipologia_i_cicle_de_vida_de_les_dades\Practica2\quadre_de_contrib.png)
+
+****
+# Referències
+****
+
+- **Font de les dades**:
+
+  https://www.sciencedirect.com/science/article/pii/S2352340919306985?via%3Dihub
+  
+- **Font de on s'han descarregat les dades**:
+
+  https://archive.ics.uci.edu/ml/datasets/Estimation+of+obesity+levels+based+on+eating+habits+and+physical+condition+
+  
+- **Funció de normalització de variables**:
+
+  https://www.rdocumentation.org/packages/BBmisc/versions/1.10/topics/normalize
+  
+- **Arbres de desició**:
+
+  https://rpubs.com/jboscomendoza/arboles_decision_clasificacion
+
+- **Model C5.0**:
+
+  https://bookdown.org/content/2274/metodos-de-clasificacion.html#ejemplo-con-r
+
+- **Model rpart**:
+
+  https://analisisydecision.es/monografico-arboles-de-clasificacion-con-rpart/
+  
+- **Funció ‘lm’, regressió lineal**:
+
+  https://www.datanalytics.com/libro_r/regresion-lineal.html
+
+- **Regressió logística**:
+
+  https://stats.idre.ucla.edu/other/mult-pkg/faq/general/faq-how-do-i-interpret-odds-ratios-in-logistic-regression/
+
+  http://www.hrc.es/bioest/Reglog_2.html
+
+  https://www.datanalytics.com/libro_r/regresion-logistica.html
+
+  https://rpubs.com/Joaquin_AR/229736
+  
+- **Contrast no paramètric mostres independents’**:
+
+  http://www.ub.edu/aplica_infor/spss/cap6-2.htm https://rpubs.com/Rortizdu/333026
+
+  https://ocw.ehu.eus/pluginfile.php/3145/mod_resource/content/1/estadistica/tema-7-regresion-con-r.pdf
+
+- **ANOVA**:
+
+  https://biocosas.github.io/R/050_anova.html
+
+  https://support.minitab.com/es-mx/minitab/18/help-and-how-to/modeling-statistics/anova/how-to/one-way-anova/interpret-the-results/key-results/#step-1-determine-whether-the-differences-between-group-means-are-statistically-significant
+
+  https://www.ugr.es/~jsalinas/apuntes/Anova.pdf
+
+  https://support.minitab.com/es-mx/minitab/18/help-and-how-to/modeling-statistics/anova/supporting-topics/anova-statistics/understanding-sums-of-squares/#:~:text=aleatoriedad o error.-,Suma de los cuadrados en ANOVA,puede atribuir a diferentes factores.&text=La suma de los cuadrados del error,la variación atribuida al error.
+
+  http://www.ub.edu/stat/docencia/EADB/Anova.pdf
+
+  https://ddd.uab.cat/pub/caplli/2016/163568/metinvsoccua_cap3-8a2016.pdf
+
+- **ANOVA multifactorial**:
+
+  https://help.xlstat.com/s/article/comparaciones-mltiples-pairwise-anova-multifactorial?language=es
 
